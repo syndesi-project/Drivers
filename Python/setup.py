@@ -17,6 +17,11 @@ setup(
     long_description=long_description,
     packages=find_packages(),
     install_requires=['numpy'],
+    entry_points = {
+        'console_scripts': [
+            'syndesi-drivers=syndesi_drivers.cli.cli:main'
+            ],
+    },
     keywords=['python', 'syndesi', 'drivers'],
     classifiers=[
         "Development Status :: 3 - Alpha",
