@@ -4,6 +4,7 @@ from syndesi.protocols import Protocol
 
 class Driver(ABC):
     _prot : Protocol
+    _EXCLUDE_FROM_LIST = False
     @abstractclassmethod
     def test(self):
         """

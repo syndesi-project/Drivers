@@ -286,6 +286,7 @@ class ScannerCard(Multimeter):
 
 
 class SDM30x5(SCPIDriver):
+    _EXCLUDE_FROM_LIST = True
     AUTO_RANGE = 'AUTO'
 
     class Function(Enum):

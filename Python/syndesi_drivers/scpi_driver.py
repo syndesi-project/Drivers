@@ -8,6 +8,7 @@ from syndesi.adapters import Adapter
 from syndesi.protocols import SCPI
 
 class SCPIDriver(Driver):
+    _EXCLUDE_FROM_LIST = True
     def __init__(self, adapter : Adapter, termination : str = '\n') -> None:
         super().__init__()
 

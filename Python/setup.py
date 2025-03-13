@@ -19,7 +19,7 @@ setup(
     install_requires=['numpy'],
     entry_points = {
         'console_scripts': [
-            'syndesi-drivers=syndesi_drivers.cli.cli:main'
+            'syndesi-drivers=syndesi_drivers.cli.syndesi_drivers:main'
             ],
     },
     keywords=['python', 'syndesi', 'drivers'],
