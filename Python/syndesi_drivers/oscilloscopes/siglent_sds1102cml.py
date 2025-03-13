@@ -2,8 +2,8 @@
 # Sébastien Deriaz
 # 30.05.2023
 
-from . import Oscilloscope
-from syndesi.adapters import Adapter, Serial, VISA
+from .oscilloscopes import Oscilloscope
+from syndesi.adapters import Adapter, SerialPort, VISA
 from syndesi.protocols import SCPI
 from enum import Enum
 import re

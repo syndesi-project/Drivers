@@ -1,4 +1,4 @@
-from syndesi.adapters import Serial
+from syndesi.adapters import SerialPort
 from syndesi.protocols.delimited import Delimited
 from .powersupplies import PowersupplyDC
 from typing import Union, List
@@ -6,7 +6,7 @@ from enum import Enum
 from syndesi.tools.types import is_number
 
 class Tenma72_13360(PowersupplyDC):
-    def __init__(self, adapter: Serial) -> None:
+    def __init__(self, adapter: SerialPort) -> None:
         """
         Tenma 72-13360 30V 15A power supply
 
@@ -16,7 +16,7 @@ class Tenma72_13360(PowersupplyDC):
         """
         super().__init__()
 
-        assert isinstance(adapter, Serial), "Invalid adapter"
+        assert isinstance(adapter, SerialPort), "Invalid adapter"
         self._prot = Delimited(adapter, termination='\n')
 
     def test(self):

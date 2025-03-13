@@ -4,7 +4,7 @@
 
 
 from syndesi.protocols import SCPI, Protocol
-from . import MultiChannelPowersupplyDC, PowersupplyDC
+from .powersupplies import MultiChannelPowersupplyDC, PowersupplyDC
 from ..scpi_driver import SCPIDriver
 from syndesi.adapters import *
 from packaging.version import Version
