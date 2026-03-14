@@ -2,13 +2,13 @@ from .multimeters import Multimeter
 from syndesi import Adapter, IP, VISA, SCPI
 from enum import Enum
 from typing import Union
+from . import Voltmeter, Ammeter
 
 # https://int.siglent.com/upload_file/user/SDM3055/SDM3055_RemoteManual_RC06035-E01A.pdf
 
-# https://int.siglent.com/upload_file/user/SDM3055/SDM3055_RemoteManual_RC06035-E01A.pdf
 
-class SDM3055(IVoltmeter, IAmmeter):
-    def __init__(self, adapter : IAdapter) -> None:
+class SDM3055(Voltmeter, Ammeter):
+    def __init__(self, adapter : Adapter) -> None:
         """
         Siglent SDM3055 5½ digit multimeter
 
@@ -373,7 +373,7 @@ class SDM30x5(SCPIDriver):
 
     def __init__(self, adapter : Adapter) -> None:
         """
-        Siglent SDM3055 5½ digit multimeter
+        Generic siglent SDM30x5 multimeter
 
         Parameters
         ----------

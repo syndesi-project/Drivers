@@ -1,6 +1,9 @@
 from syndesi.adapters import IP, VISA, Adapter
 from syndesi.protocols.scpi import SCPI
 from typing import Union, List
+from syndesi import IP, VISA, Adapter, SCPI
+
+from typing import Union
 from enum import Enum
 from syndesi.tools.types import is_number
 
