@@ -1,1 +1,1 @@
-from .powersupplies import MultiChannelPowersupplyDC, PowersupplyDC
+from .powersupplies import DCMultiChannelPowerSupply, DCPowerSupply

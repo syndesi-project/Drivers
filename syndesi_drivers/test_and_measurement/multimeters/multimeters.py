@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 
+
 class Voltmeter(ABC):
     # Provides a voltage measurement
     @abstractmethod
     def measure_dc_voltage(self) -> float:
         pass
-    
+
     @abstractmethod
     def measure_ac_voltage(self) -> float:
         pass
@@ -15,7 +16,7 @@ class Ammeter(ABC):
     @abstractmethod
     def measure_dc_current(self) -> float:
         pass
-    
+
     @abstractmethod
     def measure_ac_current(self) -> float:
         pass

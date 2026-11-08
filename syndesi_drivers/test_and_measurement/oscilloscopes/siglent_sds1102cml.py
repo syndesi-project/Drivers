@@ -2,45 +2,55 @@
 # Sébastien Deriaz
 # 30.05.2023
 
-from .oscilloscopes import Oscilloscope
-from syndesi.adapters import Adapter, SerialPort, VISA
-from syndesi.protocols import SCPI
-from enum import Enum
 import re
 
+from syndesi import Visa, Adapter, SerialPort, SCPIDriver, SCPI
+from .oscilloscopes import MultiChannelOscilloscope, Coupling, OscilloscopeChannel
 
 # ACQW : Specifi
 
-class SDS1102CML(Oscilloscope):
+class SDS1102CMLChannel(OscilloscopeChannel):
+    """SDS1102CML Oscilloscope channel"""
+    def __init__(self, protocol : SCPI, channel : int) -> None:
+        super().__init__(channel)
+        self._prot = protocol
+
+    def set_coupling(self, coupling : Coupling | str):
+        coupling = Coupling(coupling)
+        coupling_match = {
+            Coupling.AC : 'A1M',
+            Coupling.DC : 'D1M',
+            Coupling.GND : 'GND',
+        }
+        self._prot.write(f'C{self._channel}:CPL {coupling_match[coupling]}')
+
+    def set_voltage_scale(self, volts_per_div : float):
+        pass
+
+
+class SDS1102CML(MultiChannelOscilloscope, SCPIDriver):
+    """SDS1102CML Oscilloscope"""
+    CHANGELOG = {
+        "1.0.0" : "Initial version"
+    }
+
     def __init__(self, adapter : Adapter) -> None:
-        super().__init__()
-
-
-        assert isinstance(adapter, Serial) or isinstance(adapter, VISA), "Invalid adapter"
         self._prot = SCPI(adapter)
+        super().__init__(
+            lambda channel : SDS1102CMLChannel(self._prot, channel),
+            [1, 2]
+        )
+
+        assert isinstance(adapter, SerialPort) or isinstance(adapter, Visa), "Invalid adapter"
 
     def set_time_scale(self, seconds_per_div : float):
         pass
 
-    def set_voltage_scale(self, channel : int, volts_per_div : float):
-        pass
-
-    def set_coupling(self, channel : int, coupling : Oscilloscope.Coupling):
-        coupling_match = {
-            Oscilloscope.Coupling.AC : 'A1M',
-            Oscilloscope.Coupling.DC : 'D1M',
-            Oscilloscope.Coupling.GND : 'GND',
-
-        }
-        self._prot.write(f'C{channel}:CPL {coupling_match[coupling]}')
-
     def run_self_cal(self):
+        """Run self-calibration"""
         out = self._prot.query('*CAL?')
         if out != '*CAL 0':
             raise RuntimeError('Self-calibration sequence failed, response : \'{out}\'')
-
-    def clear_status_register(self):
-        self._prot.write('*CLS')
 
     def read_error_register(self):
         """
@@ -53,7 +63,7 @@ class SDS1102CML(Oscilloscope):
         description : str
         """
 
-        errorStatusRegisterStructure = {
+        error_status_register_structure = {
             0 : 'No error',
             1 : 'Unrecognized command/query header',
             2 : 'Invalid character',
@@ -74,10 +84,10 @@ class SDS1102CML(Oscilloscope):
         pattern = r'CMR [0-9]{1,2}'
         match = re.match(pattern, out)
         code = int(match.group(1))
-        if code not in errorStatusRegisterStructure:
+        if code not in error_status_register_structure:
             raise ValueError('Invalid error code in response \'{out}\'')
         else:
-            return code, errorStatusRegisterStructure[code]
+            return code, error_status_register_structure[code]
 
 
     def save_csv(self):
@@ -111,5 +121,5 @@ class SDS1102CML(Oscilloscope):
         state : bool
         """
         self._prot.write(f'C{channel}:FILT {"ON" if state else "OFF"}')
-        
+
 

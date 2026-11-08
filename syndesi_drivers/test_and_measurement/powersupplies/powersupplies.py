@@ -1,58 +1,59 @@
-from abc import ABC, abstractmethod
-from syndesi.tools.types import assert_number
+from abc import abstractmethod
+from typing import Any, Callable
 
-class PowersupplyDC(ABC):
-    def __init__(self, channel_number : int = None) -> None:
-        """
-        Single channel power supply (or a specific channel of a multi-channel power supply)
+from syndesi import SubDriver
+from syndesi_drivers.test_and_measurement.instrument import MultiChannelInstrument
 
-        Parameters
-        ----------
-        channel_number : int
-            Channel in the case of this instance being a specific channel of a multi-channel power supply (None by default)
-        """
+class DCPowerSupply(SubDriver):
+    """
+    Single channel power supply (or a specific channel of a multi-channel power supply)
+
+    Parameters
+    ----------
+    channel_number : int
+        Channel in the case of this instance being a specific channel of a multi-channel power supply (None by default)
+    """
+    def __init__(self, channel_number : int | None = None) -> None:
         super().__init__()
         self._channel_number = channel_number
-        
+
     @abstractmethod
-    def set_voltage(self, volts : float):
-        pass
-    
+    def set_voltage(self, volts : float) -> None:
+        """Set the power supply output voltage"""
+
     @abstractmethod
     def get_voltage(self) -> float:
-        pass
-    
+        """Get power supply output voltage"""
+
     @abstractmethod
-    def set_current(self, amps : float):
-        pass
-    
+    def set_current(self, amps : float) -> None:
+        """Set power supply max output current"""
+
     @abstractmethod
     def get_current(self) -> float:
-        pass
-    
-    @abstractmethod
-    def set_output_state(self, state : bool):
-        pass
-    
-    @abstractmethod
-    def measure_dc_voltage(self) -> float:
-        pass
-    
-    @abstractmethod
-    def measure_dc_current(self) -> float:
-        pass
+        """Get power supply max output current"""
 
-class MultiChannelPowersupplyDC(ABC):
+    @abstractmethod
+    def set_output_state(self, state : bool) -> None:
+        """Set power supply out state"""
+
+    @abstractmethod
+    def measure_voltage(self) -> float:
+        """Measure power suplpy output voltage"""
+
+    @abstractmethod
+    def measure_current(self) -> float:
+        """Measure power supply output current"""
+
+class DCMultiChannelPowerSupply(MultiChannelInstrument):
+    """
+    A multi-channel DC power supply. Use .channel(int) to retrieve a channel
+    """
     # Provides power supply functions (multi channel)
 
-    def __init__(self, n_channels : int) -> None:
-        ABC.__init__(self) # TODO : Check if this is the right way
-        self._n_channels = n_channels
-
-    def _check_channel(self, channel):
-        assert_number(channel)
-        assert 1 <= channel <= self._n_channels, f"Invalid channel number : {channel}"
-
-    @abstractmethod
-    def channel(self, channel_number : int) -> PowersupplyDC:
-        pass
+    def __init__(
+            self,
+            single_channel_creator: Callable[[int], Any],
+            channels: list[int], pre_instanciate: bool = True
+        ) -> None:
+        super().__init__(single_channel_creator, channels, pre_instanciate)

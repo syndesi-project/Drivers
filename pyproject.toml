@@ -1,17 +1,17 @@
 [build-system]
-requires = ["hatchling >= 1.26"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "syndesi-drivers"
-dynamic = ["version"]
+version = "0.1.0"
 description = "Syndesi drivers repository"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Sébastien Deriaz", email = "sebastien.deriaz1@gmail.com" }]
-keywords = ["python", "syndesi", "drivers", "ip",
+keywords = ["python", "syndesi", "interface", "ethernet",
 "serial", "visa", "protocol", "driver", "adpater"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -21,14 +21,39 @@ classifiers = [
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
 ]
-#dependencies = ['prompt_toolkit', 'pyserial', 'rich', 'platformdirs']
 
-#[project.optional-dependencies]
-#extra = [""]
+dependencies = [
+    "syndesi>=0.7.5",
+]
+
+[project.optional-dependencies]
+visa = [
+    "pyvisa",
+]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.9.4",
+    "black>=26.10.0",
+    "dearpygui>=2.3.1",
+    "isort>=9.0.2",
+    "mypy>=2.4.0",
+    "pylint>=4.1.2",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-xdist>=3.8.0",
+    "pyvisa>=1.16.2",
+    "ruff>=0.16.10",
+    "syndesi>=0.7.5",
+    "twine>=7.0.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["syndesi_drivers*"]
+
+[project.scripts]
+syndesi-drivers = "syndesi_drivers.cli.syndesi_drivers:main"
 
 # ----------------------------
 # Tooling configs
@@ -68,5 +93,8 @@ exclude = ["tests"]
 # Disable too-many-arguments, this is the case for adapters/protocols/drivers
 # All arguments are necessary and it would not make sense to group them / move them
 # too-many-positional-arguments is kept however because it makes sense
-# Also disable W1203 to allow f-strings in logging lines
-disable = ["R0913", "W1203", "R0903"]
+disable = [
+    "R0903", # too-few-public-methods
+    "R0801", # Similar lines
+    "R0913", # Too many arguments
+]
