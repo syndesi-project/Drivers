@@ -1,14 +1,15 @@
 # File : example_adam6266.py
 # Author : Sébastien Deriaz
 # License : GPL
-from syndesi import IP
 import time
 
-from adam6266 import Adam6266
+from syndesi import IP
+
+from syndesi_drivers.industrial.adam6200 import Adam6266
 
 ADDRESS = "192.168.1.219"
 
-def main():
+def main() -> None:
     module = Adam6266(IP(ADDRESS))
 
     # Toggle relay 0
