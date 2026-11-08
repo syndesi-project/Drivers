@@ -2,24 +2,22 @@
 # Sébastien Deriaz
 # 02.04.2023
 
-
-from syndesi import SCPI, Protocol, Timeout, Adapter, Visa
-from . import MultiChannelPowersupplyDC, PowersupplyDC
-from syndesi.adapters import *
-from packaging.version import Version
-from typing import Union
-from enum import Enum
-from syndesi.tools.types import assert_number, is_number
 from dataclasses import dataclass
-import struct
+from enum import Enum
 
-DEFAULT_TIMEOUT = Timeout(0.2, 0.1)
+from syndesi import IP, SCPI, Adapter, SCPIDriver, Visa
+
+from .powersupplies import DCMultiChannelPowerSupply, DCPowerSupply
+
+DEFAULT_TIMEOUT = 0.2
 
 class ChannelMode(Enum):
+    """Channel mode"""
     CONSTANT_VOLTAGE = 0
     CONSTANT_CURRENT = 1
-    
+
 class OperationMode(Enum):
+    """Operation mode"""
     INDEPENDENT = 'independant'
     SERIES = 'series'
     PARALLEL = 'parallel'
@@ -32,6 +30,7 @@ _operation_mode_id = {
 
 @dataclass
 class SystemStatus:
+    """System status"""
     channel1_mode : ChannelMode
     channel2_mode : ChannelMode
     operation_mode : OperationMode
@@ -42,15 +41,15 @@ class SystemStatus:
     channel1_waveform_display : bool
     channel2_waveform_dislpay : bool
 
-class SiglentSPD3303xChannel(PowersupplyDC):
-    VERSION = Version('1.0.0')
-    def __init__(self, adapter : Union[Adapter, Protocol], channel_number: int = None) -> None:
+class SiglentSPD3303xChannel(DCPowerSupply):
+    """Siglent SPD3303X power suplpy single channel"""
+    def __init__(self, protocol : SCPI, channel_number: int) -> None:
         super().__init__(channel_number)
-        if isinstance(adapter, Protocol):
-            self._prot = adapter
-        else:
-            adapter.set_default_timeout(DEFAULT_TIMEOUT)
-            self._prot = SCPI(adapter)
+        self._prot = protocol
+
+    def version(self) -> str:
+        """Return version"""
+        return "1.0.0"
 
     def measure_dc_current(self) -> float:
         """
@@ -64,7 +63,7 @@ class SiglentSPD3303xChannel(PowersupplyDC):
         """
         output = self._prot.query(f'MEAS:CURR? CH{self._channel_number}')
         return float(output)
-    
+
     def measure_dc_voltage(self) -> float:
         """
         Return voltage measurement
@@ -75,7 +74,7 @@ class SiglentSPD3303xChannel(PowersupplyDC):
         """
         output = self._prot.query(f'MEAS:VOLT? CH{self._channel_number}')
         return float(output)
-    
+
     def measure_dc_power(self) -> float:
         """
         Return power measurement
@@ -86,7 +85,7 @@ class SiglentSPD3303xChannel(PowersupplyDC):
         """
         output = self._prot.query(f'MEAS:POW? CH{self._channel_number}')
         return float(output)
-    
+
 
 
     def set_voltage(self, volts : float):
@@ -97,10 +96,10 @@ class SiglentSPD3303xChannel(PowersupplyDC):
         output = self._prot.read()
         try:
             volts = float(output)
-        except ValueError as e:
+        except ValueError:
             volts = None
         return volts
-    
+
     def set_current(self, amps : float):
         self._prot.write(f'CH{self._channel_number}:CURR {amps:.3f}')
 
@@ -109,7 +108,7 @@ class SiglentSPD3303xChannel(PowersupplyDC):
         output = self._prot.read()
         try:
             amps = float(output)
-        except ValueError as e:
+        except ValueError:
             amps = None
         return amps
 
@@ -132,14 +131,14 @@ class SiglentSPD3303xChannel(PowersupplyDC):
         current : float or list
         time : float or list
         """
-        if all([is_number(x) for x in [group, voltage, current, time]]):
+        if all([int(x) for x in [group, voltage, current, time]]):
             # Make lists
             group = [group]
             voltage = [voltage]
             current = [current]
             time = [time]
         elif not all([isinstance(x, list) for x in [group, voltage, current, time]]):
-            raise ValueError(f"Invalid input types")
+            raise ValueError("Invalid input types")
 
         for g, v, c, t in zip(group, voltage, current, time):
             assert 1 <= g <= 5, f'Invalid group value : {g}'
@@ -188,16 +187,22 @@ class SiglentSPD3303xChannel(PowersupplyDC):
         return mode
 
 
-class SiglentSPD3303x(MultiChannelPowersupplyDC):
-    VERSION = Version('1.0.0')
+class SiglentSPD3303x(DCMultiChannelPowerSupply, SCPIDriver):
+    CHANGELOG = {
+        "1.0.0" : "Initial version"
+    }
 
     def __init__(self, adapter: Adapter) -> None:
-        # TODO : Check if this is the right way
-        MultiChannelPowersupplyDC.__init__(self, 2)
-        assert isinstance(adapter, VISA) or isinstance(
-            adapter, IP), "Invalid adapter"
-        # TODO : Check if this is the right way
         SCPIDriver.__init__(self, adapter)
+        assert isinstance(adapter, Visa) or isinstance(
+            adapter, IP), "Invalid adapter"
+        self._
+        #self._adapter = adapter
+        DCMultiChannelPowerSupply.__init__(
+            self,
+            lambda channel : SiglentSPD3303xChannel(self._adapter, channel),
+            [1, 2]
+        )
 
     def test(self):
         return 'SPD3303X' in self.get_identification()
@@ -280,8 +285,8 @@ class SiglentSPD3303x(MultiChannelPowersupplyDC):
         """
         output = sum([self.channel(i+1).measure_dc_power() for i in range(self._n_channels)])
         return output
-    
-    
+
+
 
     def get_system_status(self):
         """

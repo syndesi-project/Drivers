@@ -1,8 +1,6 @@
-from syndesi.adapters import IP
-from syndesi.protocols.delimited import Delimited
-from datetime import datetime, date, time
-from syndesi.tools.types import is_number, assert_number
 import re
+from datetime import date, datetime, time
+from syndesi import IP, Delimited
 
 ERROR_PREFIX = 'NA:'
 
@@ -33,7 +31,7 @@ OFF_KEYWORD = 'OFF'
 #   - OFF : time starts counting immediately
 
 
-class SH242():
+class SH242:
     def __init__(self, adapter: IP) -> None:
         """
         ESPEC SH-242 driver
@@ -79,7 +77,7 @@ class SH242():
             Date object containing year, month and day
         """
         output = self._query('DATE?')
-        
+
         DATE_FORMAT = r'%y.%m/%d'
         _date = datetime.strptime(output.strip(), DATE_FORMAT)
         return date(_date.year, _date.month, _date.day)
@@ -127,7 +125,7 @@ class SH242():
             # program_number, step_number, temperature_setpoint[, humidity_setpoint], step_remaining_time, counter_a_remaining, counter_b_remaining
             # 1, 2, 27.0, 85, 0:58, 1, 2
             values = output.strip().split(',', maxsplit=1)
-            program_number = int(values[0])            
+            program_number = int(values[0])
 
         return program_number
 
@@ -348,7 +346,7 @@ class SH242():
             setpoint = values[1]
         temperature_upper_limit_alarm_value = float(values[2])
         temperature_lower_limit_alarm_value = float(values[3])
-        
+
         return (temperature, setpoint, temperature_upper_limit_alarm_value, temperature_lower_limit_alarm_value)
 
     def get_humidity(self) -> float:
@@ -385,7 +383,7 @@ class SH242():
             setpoint = values[1]
         humidity_upper_limit_alarm_value = int(values[2])
         humidity_lower_limit_alarm_value = int(values[3])
-        
+
 
         return (humidity, setpoint, humidity_upper_limit_alarm_value, humidity_lower_limit_alarm_value)
 
@@ -475,7 +473,7 @@ class SH242():
         # Parse response : 'REFx'
         print(output)
         return int(output[3:])
-    
+
     def start_program(self, program):
         """
         Starts the specified program
@@ -486,7 +484,7 @@ class SH242():
         """
         assert_number(program)
         self._query(f'PRGM,RUN,RAM:{program:d},STEP1')
-    
+
     def skip_one_step(self):
         """
         Skip the current step in the running program
@@ -528,7 +526,7 @@ class SH242():
         """
         output = self._query('POWER,' + ('ON' if state else 'OFF'))
 
-    def set_temperature(self, temperature : float):
+    def set_temperature(self, temperature : float | str):
         """
         Configure the current temperature setpoint
 
@@ -540,14 +538,12 @@ class SH242():
         """
         if isinstance(temperature, str):
             if temperature.upper() == OFF_KEYWORD.upper():
-                self._prot.query(f'TEMP, SOFF')
-        elif is_number(temperature):
-            self._prot.query(f'TEMP, S{temperature}')
+                self._prot.query('TEMP, SOFF')
         else:
-            raise ValueError(f"Invalid temperature type : {type(temperature)}")
+            self._prot.query(f'TEMP, S{float(temperature)}')
 
 
-    def set_humidity(self, humidity):
+    def set_humidity(self, humidity : float | str):
         """
         Configure the current humidity setpoint
 
@@ -559,11 +555,9 @@ class SH242():
         """
         if isinstance(humidity, str):
             if humidity.upper() == OFF_KEYWORD.upper():
-                self._prot.query(f'HUMI, SOFF')
-        elif is_number(humidity):
-            self._prot.query(f'HUMI, S{humidity}')
+                self._prot.query('HUMI, SOFF')
         else:
-            raise ValueError(f"Invalid humidity type : {type(humidity)}")
+            self._prot.query(f'HUMI, S{float(humidity)}')
 
     def set_refrigerator_state(self, state : bool):
         """

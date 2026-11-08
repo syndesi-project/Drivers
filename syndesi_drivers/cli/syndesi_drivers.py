@@ -3,7 +3,8 @@
 # Syndesi drivers CLI tool
 import argparse
 from enum import Enum
-from .tools import list_drivers, print_drivers
+
+from .tools import print_drivers
 
 
 class Subcommand(Enum):
@@ -20,9 +21,7 @@ def main():
     args = parser.parse_args()
 
     if args.subcommand == Subcommand.LIST.value:
-        print_drivers()    
-        
-
+        print_drivers()
 
 if __name__ == '__main__':
     main()

@@ -1,11 +1,8 @@
-from syndesi.adapters import SerialPort
-from syndesi.protocols.delimited import Delimited
-from .powersupplies import PowersupplyDC
-from typing import Union, List
-from enum import Enum
-from syndesi.tools.types import is_number
 
-class Tenma72_13360(PowersupplyDC):
+from syndesi import SerialPort, Delimited
+from .powersupplies import DCPowerSupply
+
+class Tenma_72_13360(DCPowerSupply):
     def __init__(self, adapter: SerialPort) -> None:
         """
         Tenma 72-13360 30V 15A power supply
@@ -19,16 +16,16 @@ class Tenma72_13360(PowersupplyDC):
         assert isinstance(adapter, SerialPort), "Invalid adapter"
         self._prot = Delimited(adapter, termination='\n')
 
-    def test(self):
+    def test(self) -> bool:
         """
         Test presence of the device
         """
         output = self._prot.query('*IDN?')
         # Output is typically :
-        # Tenma ID : TENMA 72-13360 V2.2 SN:000003343070 
-        return ("Tenma ID" in output) or ("TENMA" in output)
-    
-    def set_current(self, amps: float):
+        # Tenma ID : TENMA 72-13360 V2.2 SN:000003343070
+        return 'tenma' in output.lower()
+
+    def set_current(self, amps: float) -> None:
         """
         Set the power supply current
         
@@ -47,8 +44,8 @@ class Tenma72_13360(PowersupplyDC):
         amps : float
         """
         return float(self._prot.query('ISET?'))
-    
-    def set_voltage(self, volts: float):
+
+    def set_voltage(self, volts: float) -> None:
         """
         Set the power supply voltage
         
@@ -56,8 +53,7 @@ class Tenma72_13360(PowersupplyDC):
         ----------
         volt : float
         """
-        assert is_number(volts), f"Invalid volts type : {type(volts)}"
-        self._prot.write(f'VSET:{volts}')
+        self._prot.write(f'VSET:{float(volts):.3f}')
 
     def get_voltage(self) -> float:
         """
@@ -68,8 +64,8 @@ class Tenma72_13360(PowersupplyDC):
         volts : float
         """
         return float(self._prot.query('VSET'))
-    
-    def measure_dc_current(self) -> float:
+
+    def measure_current(self) -> float:
         """
         Return the output current measurement
 
@@ -78,8 +74,8 @@ class Tenma72_13360(PowersupplyDC):
         amps : float
         """
         return float(self._prot.query('IOUT?'))
-    
-    def measure_dc_voltage(self) -> float:
+
+    def measure_voltage(self) -> float:
         """
         Return the output voltage measurement
 
@@ -88,8 +84,8 @@ class Tenma72_13360(PowersupplyDC):
         volts : float
         """
         return float(self._prot.query('VOUT?'))
-    
-    def set_beep_state(self, enabled : bool):
+
+    def set_beep_state(self, enabled : bool) -> None:
         """
         Enable or disable the beep
 
@@ -98,8 +94,8 @@ class Tenma72_13360(PowersupplyDC):
         enabled : bool
         """
         self._prot.write(f'BOOP:{1 if enabled else 0}')
-    
-    def set_output_state(self, state: bool):
+
+    def set_output_state(self, state: bool) -> None:
         """
         Set the output state
 
@@ -108,8 +104,8 @@ class Tenma72_13360(PowersupplyDC):
         state : bool
         """
         self._prot.write(f'OUT:{1 if state else 0}')
-    
-    def set_overcurrent_protection(self, amps : float):
+
+    def set_overcurrent_protection(self, amps : float) -> None:
         """
         Set the overcurrent protection value
 
@@ -117,10 +113,9 @@ class Tenma72_13360(PowersupplyDC):
         ----------
         amps : float
         """
-        assert is_number(amps), f"Invalid amps type : {type(amps)}"
-        self._prot.write(f'OCP:{amps}')
+        self._prot.write(f'OCP:{float(amps):.3f}')
 
-    def set_overvoltage_protection(self, volts : float):
+    def set_overvoltage_protection(self, volts : float) -> None:
         """
         Set the overvoltage protection value
 
@@ -128,10 +123,9 @@ class Tenma72_13360(PowersupplyDC):
         ----------
         volts : float
         """
-        assert is_number(volts), f"Invalid volts type : {type(volts)}"
-        self._prot.write(f'OVP:{volts}')
+        self._prot.write(f'OVP:{float(volts):.3f}')
 
-    def set_voltage_slope(self, slope : float):
+    def set_voltage_slope(self, slope : float) -> None:
         """
         Set the voltage slope as V/100us
 
@@ -139,9 +133,10 @@ class Tenma72_13360(PowersupplyDC):
         ----------
         slope : float        
         """
-        assert is_number(slope), f"Invalid slope type : {type(slope)}"
-    
-    def set_lock(self, enabled : bool):
+        # TODO : Implement
+        raise NotImplementedError()
+
+    def set_lock(self, enabled : bool) -> None:
         """
         Enable or disable the front panel lock
 
@@ -151,7 +146,7 @@ class Tenma72_13360(PowersupplyDC):
         """
         self._prot.write(f'LOCK:{1 if enabled else 0}')
 
-    def set_external_trigger(self, enabled : bool):
+    def set_external_trigger(self, enabled : bool) -> None:
         """
         Enable or disable the external trigger
 

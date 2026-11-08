@@ -1,6 +1,11 @@
 # Offline tests
-from .siglent_sdm30x5 import SDM3055, SDM3045X, SDM3065X
-from syndesi.adapters import IP
+from syndesi import IP
+
+from .siglent_sdm30x5 import SiglentSDM30x5
+from .siglent_sdm3045X import SiglentSDM3045X
+from .siglent_sdm3055 import SiglentSDM3055
+from .siglent_sdm3065X import SiglentSDM3065X
+
 
 def test_instanciate():
     sdm3055 = SDM3055(IP('127.0.0.1'))

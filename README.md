@@ -1,12 +1,36 @@
 # Syndesi drivers Python package
 
-This package contains all the official Syndesi Drivers
+This package contains the official Syndesi Drivers
+
+
+
+## Folder structure
+
+
+- ``test_and_measurement``
+  - ``multimeters``
+  - ``oscilloscopes``
+  - ``powersupplies``
+  - ``sourcemeters``
+  - ``waveform_generators``
+- ``motion``
+  - ``controllers``
+- ``environmental``
+  - ``ovens``
+- ``imaging``
+- ``industrial``
+  - ``io_modules``
+
+
+
+
+
 
 ## Driver structure
 
 ```python
 class DeviceName(Interfaces):
-    def __init__(self, adapter : IAdapter) -> None:
+    def __init__(self, adapter : Adapter) -> None:
         """
         Device description
         """

@@ -1,372 +1,48 @@
+"""Siglent SDM30x5 series multimeters driver"""
+
+from enum import Enum, StrEnum
+from syndesi import IP, SCPI, Visa, Adapter, SCPIDriver, SubDriver
+from syndesi_drivers.test_and_measurement.instrument import InstrumentChannel, MultiChannelInstrument
+from syndesi_drivers.tools import NormalizedFloatStrEnum, NormalizedStrEnum
 from .multimeters import Multimeter
-from syndesi import Adapter, IP, VISA, SCPI
-from enum import Enum
-from typing import Union
-from . import Voltmeter, Ammeter
 
 # https://int.siglent.com/upload_file/user/SDM3055/SDM3055_RemoteManual_RC06035-E01A.pdf
 
+from .siglent_sc1016 import ScannerCard, TemperatureTransducer
 
-class SDM3055(Voltmeter, Ammeter):
-    def __init__(self, adapter : Adapter) -> None:
-        """
-        Siglent SDM3055 5½ digit multimeter
+AUTO_RANGE = "AUTO"
 
-        Parameters
-        ----------
-        adpater : IAdapter
-            Adapter to use, both IP and VISA are allowed
-        """
-        super().__init__()
+class Function(Enum):
+    """SDM30x5 multimeter function"""
+    VOLTAGE = 'VOLT'
+    VOLTAGE_AC = 'VOLT:AC'
+    CURRENT = 'CURR'
+    CURRENT_AC = 'CURR:AC'
+    CONTINUITY = 'CONT'
+    DIODE = 'DIOD'
+    FREQUENCY = 'FREQ'
+    PERIOD = 'PER'
+    RESISTANCE4 = 'FRES'
+    RESISTANCE = 'RES'
+    CAPACITANCE = 'CAP'
+    TEMPERATURE = 'TEMP'
 
-        assert isinstance(adapter, IP) or isinstance(adapter, VISA), "Invalid adapter"
-        self._prot = SCPI(adapter)
-
-    def measure_ac_current(self) -> float:
-        """
-        Make an AC current measurement and return the result
-        """
-        self._prot.write('CONF:CURR:AC')
-        self._prot.write('INIT')
-        self._prot.write('*TRG')
-        output = float(self._prot.query('FETC?'))
-        return output
-
-    def measure_dc_current(self) -> float:
-        """
-        Make a DC current measurement and return the result
-        """
-        self._prot.write('CONF:CURR:DC')
-        self._prot.write('INIT')
-        self._prot.write('*TRG')
-        output = float(self._prot.query('FETC?'))
-        return output
-
-    def measure_ac_voltage(self) -> float:
-        """
-        Make an AC voltage measurement and return the result
-        """
-        self._prot.write('CONF:VOLT:AC')
-        self._prot.write('INIT')
-        self._prot.write('*TRG')
-        output = float(self._prot.query('FETC?'))
-        return output
-
-    def measure_dc_voltage(self) -> float:
-        """
-        Make a DC voltage measurement and return the result
-        """
-        self._prot.write('CONF:VOLT:DC')
-        self._prot.write('INIT')
-        self._prot.write('*TRG')
-        output = float(self._prot.query('FETC?'))
-        return output
+class Impedance(NormalizedFloatStrEnum):
+    """Resistance impedance range"""
+    _10M = 10e6
+    _10G = 10e9
 
 
-__RANGE_TOLERANCE = 0.01 # 1%
-
-class Range(Enum):
-    def __init__(self, value) -> None:
-        for x in dir(self):
-            if x.startswith('_'):
-                _range = getattr(self, x)
-                if isinstance(_range, float) or isinstance(_range, int):
-                    if _range * (1-__RANGE_TOLERANCE) <= value <= _range * (1+__RANGE_TOLERANCE):
-                        return _range      
-
-class ScannerCard(Multimeter):
-    class Function(Enum):
-        VOLTAGE = 'DCV'
-        VOLTAGE_AC = 'ACV'
-        CURRENT = 'DCI'
-        CURRENT_AC = 'ACI'
-        RESISTANCE = '2W'
-        RESISTANCE4 = '4W'
-        CAPACITANCE = 'CAP'
-        FREQUENCY = 'FRQ'
-        CONTINUITY = 'CONT'
-        DIODE = 'DIO'
-        TEMPERATURE = 'TEMP'
-
-    class VoltageRange(Range):
-        _200mV = '200MLV' # TODO : Check this
-        _2V = '2V'
-        _20V = '20V'
-        _200V = '200V'
-        AUTO = 'AUTO'
-    
-    class CurrentRange(Range):
-        _2A = '2A'
-    
-    class CurrentAcRange(Range):
-        pass
-
-    class VoltageAcRange(Range):
-        pass
-
-    class FrequencyRange(Range):
-        pass
-
-    class ResistanceRange(Range):
-        _200 = '200OHM'
-        _2k = '2KOHM'
-        _20k = '20KOHM'
-        _200k = '200KOHM'
-        _2M = '2MOHM' # TODO : Check this
-        _10M = '10MOHM'
-        _100M = '100MOHM'
-        AUTO = 'AUTO'
-    
-    class Resistance4Range(Range):
-        pass
-
-    class CapacitanceRange(Range):
-        _2nF = '2NF'
-        _20nF = '20NF'
-        _200nF = '200NF'
-        _2uF = '2UF'
-        _20uF = '20UF'
-        _200uF = '200UF'
-        _10mF = '10000UF'
-        AUTO = 'AUTO'
-
-    class Speed(Range):
-        SLOW = 'SLOW'
-        FAST = 'FAST'
-
-    class Impedance(Range):
-        _10M = '10M'
-        _10G = '10G'
-
-    class TemperatureTransducer(Range):
-        RTD_PT100 = 'RTD,PT100'
-        RTD_PT1000 = 'RTD,PT1000'
-        THER_BITS90 = 'THER,BITS90'
-        THER_EITS90 = 'THER,EITS90'
-        THER_JITS90 = 'THER,JITS90'
-        THER_KITS90 = 'THER,KITS90'
-        THER_NITS90 = 'THER,NITS90'
-        THER_RITS90 = 'THER,RITS90'
-        THER_SITS90 = 'THER,SITS90'
-        THER_TITS90 = 'THER,TITS90'
-
-    class Aperture(Range):
-        _0_001 = '0.001'
-        _0_01 = '0.01'
-        _0_1 = '0.1'
-        _1 = '1'
-
-    def __init__(self, protocol : SCPI) -> None:
-        super().__init__()
-        self._prot = protocol
-
-    
-    def is_installed(self):
-        """
-        Return True if the scanner card is installed, return False otherwise
-
-        Returns
-        -------
-        installed : bool
-        """
-        return bool(int(self._prot.query('ROUT:STAT?')))
-
-    def set_status(self, enabled : bool):
-        """
-        Enable or disable the scanner card
-
-        Parameters
-        ----------
-        enabled : bool
-        """
-        self._prot.write(f'ROUT:SCAN {"ON" if enabled else "OFF"}')
-
-    def set_start(self, start : bool):
-        """
-        Start or stop scanning card measurement
-
-        Parameters
-        ----------
-        start : bool
-        """
-        self._prot.write(f'ROUT:STAR {"ON" if start else "OFF"}')
-
-    def set__loop_mode(self, mode : str):
-        """
-        Configure scan card loop mode (scan or step)
-
-        Parameters
-        ----------
-        mode : str
-            'scan' or 'step'
-        """
-        self._prot.write(f'ROUT:FUNC {mode}')
-
-    def set__delay(self, delay : float):
-        """
-        Configure scanner card delay
-
-        Parameters
-        ----------
-        delay : float
-            Delay in seconds
-        """
-        self._prot.write(f'ROUT:DEL {delay}')
-    
-    def set_cycle_count(self, count : Union[int, str]):
-        """
-        Set the number of scanning card cycle measurements
-
-        Parameters
-        ----------
-        count : int or str
-            integer or 'AUTO'
-        """
-        if isinstance(count, str) and count.lower() == 'auto':
-            self._prot.write('ROUT:COUN:AUTO ON')
-        else:
-            self._prot.write(f'ROUT:COUN {count}')
-
-    def set_function(self, channel : int, switch : bool, function : Function, range : Range, speed : Speed, autozero : bool = None, aperture : Aperture = None):
-        """
-        Configure scanner card channel parameters
-
-        Parameters
-        ----------
-        channel : int
-            1 to 15
-        switch : bool
-            Enable or disable the channel
-        mode : ScannerCardFunction
-            Function
-        range : ScannerCardRange
-        speed : Speed
-        autozero : bool
-            Auto-zero for DC voltage and current measurements
-        aperture : Aperture
-            Gate time for frequency / period measurements
-        """
-        self._prot.write(f'ROUT:CHAN {channel},{"ON" if switch else "OFF"},{function.value},{range.value},{speed.value}')
-        if autozero is not None:
-            self._prot.write(f'ROUT:{function.value}:AZ {"ON" if autozero else "OFF"}')
-        if aperture is not None:
-            aperture = self.Aperture(aperture)
-            self._prot.write(f'ROUT:{function.value}:APER {aperture.value}')
-        
-
-    def set_limits(self, lower = None, upper = None):
-        """
-        Sets the upper and lower limits of the scanning card channel
-
-        Parameters
-        ----------
-        lower : int
-            1 to 15
-        upper : int
-            1 to 15
-        """
-        if lower is not None:
-            self._prot.write(f'ROUT:LIM:LOW {lower}')
-        if upper is not None:
-            self._prot.write(f'ROUT:LIM:HIGH {upper}')
-
-    def get_last_measurement(self, channel : int):
-        """
-        Return the final measurement value of the scan card channel
-
-        Parameters
-        ----------
-        channel : int
-            1 to 15
-        """
-        value = float(self._prot.query(f'ROUT:DATA? {channel}'))
-        return value
-
-    def set_relative_mode(self, function : Function, relative : bool):
-        """
-        Configure the relative value switch of the scanner card measurement function
-
-        Parameters
-        ----------
-        function : Function
-        relative : bool
-        """
-        self._prot.write(f'ROUT:RELA {function.value},{"ON" if relative else "OFF"}')
-
-    def set_impedance(self, impedance : Impedance):
-        """
-        Set input impedance of the scanner card
-
-        Parameters
-        ----------
-        impedance : Impedance
-        """
-        self._prot.write(f'ROUT:IMP {impedance.value}')
-
-    def set_temperature_transducer(self, transducer : TemperatureTransducer):
-        """
-        Configure thermal resistance model
-
-        Parameters
-        ----------
-        transducer : TemperatureTransducer
-        """
-        self._prot.write(f'ROUT:TEMP:{transducer.value}')
-
-    def set_temperature_unit(self, unit : str):
-        """
-        Set temperature unit
-
-        Parameters
-        ----------
-        unit : str
-            'C', 'F' or 'K'
-        """
-        self._prot.write(f'ROUT:TEMP:UNIT {unit.upper()}')
-
-    def set_frequency_display_mode(self, period : bool):
-        """
-        Set frequency or period display mode
-
-        Parameters
-        ----------
-        period : bool
-            True : Period mode
-            False : Frequency mode
-        """
-        self._prot.write(f'ROUT:{"FREQ" if period else "PER"}')
-
-        
-
-
-
-
-class SDM30x5(SCPIDriver):
+class SiglentSDM30x5(Multimeter, SCPIDriver):
+    """Generic SDM30x5 Multimeter implementation"""
     _EXCLUDE_FROM_LIST = True
-    AUTO_RANGE = 'AUTO'
-
-    class Function(Enum):
-        VOLTAGE = 'VOLT'
-        VOLTAGE_AC = 'VOLT:AC'
-        CURRENT = 'CURR'
-        CURRENT_AC = 'CURR:AC'
-        CONTINUITY = 'CONT'
-        DIODE = 'DIOD'
-        FREQUENCY = 'FREQ'
-        PERIOD = 'PER'
-        RESISTANCE4 = 'FRES'
-        RESISTANCE = 'RES'
-        CAPACITANCE = 'CAP'
-        TEMPERATURE = 'TEMP'
+    #AUTO_RANGE = 'AUTO'
 
     # Temperature types are common to all SDM30x5 multimeters as well as the scanner card
-    TemperatureTransducer = ScannerCard.TemperatureTransducer
+    #TemperatureTransducer = TemperatureTransducer
+    
 
-    class Impedance(Range):
-        _10M = '10M'
-        _10G = '10G'
-
-    class Volume(Range):
+    class Volume(StrEnum):
         LOW = 'LOW'
         MIDDLE = 'MIDDLE'
         HIGH = 'HIGH'
@@ -378,13 +54,13 @@ class SDM30x5(SCPIDriver):
         Parameters
         ----------
         adpater : Adapter
-            Adapter to use, both IP and VISA are allowed
+            Adapter to use, both IP and Visa are allowed
         """
         super().__init__(adapter)
         self._ranges = {}
         self._model = None
 
-        assert isinstance(adapter, IP) or isinstance(adapter, VISA), "Invalid adapter"
+        assert isinstance(adapter, IP) or isinstance(adapter, Visa), "Invalid adapter"
         self._prot = SCPI(adapter)
 
     def test(self) -> bool:
@@ -395,7 +71,7 @@ class SDM30x5(SCPIDriver):
         -------
         success : bool
         """
-        return self._model in self.get_identification() 
+        return self._model in self.get_identification()
 
     def abort(self):
         """
@@ -414,7 +90,7 @@ class SDM30x5(SCPIDriver):
 
         if clear_reading_memory:
             if max_readings is None:
-                values = self._prot.write(f'READ?')
+                values = self._prot.write('READ?')
             else:
                 values = self._prot.write(f'READ? {max_readings}')
         else:
@@ -521,7 +197,7 @@ class SDM30x5(SCPIDriver):
         enabled : bool
         """
         self._prot.write(f'CALC:LIM {"ON" if enabled else "OFF"}')
-    
+
     def get_limits_state(self):
         """
         Returns the state of limits testing
@@ -582,7 +258,7 @@ class SDM30x5(SCPIDriver):
         N : int
         """
         return int(self._prot.query('CALC:TRAN:HIST:COUN?'))
-    
+
     def set_histogram_bins(self, N : int):
         """
         Sets the number of bins between the lower and upper range values for the histogram. Two additional bins always exist one for measurements below the lower range and one for measurements above the upper range.
@@ -715,10 +391,10 @@ class SDM30x5(SCPIDriver):
         return function, _range
 
     def set_function(self,
-            function : Union[str, Function],
-            _range : Range = AUTO_RANGE,
+            function : str | Function,
+            _range : NormalizedFloatStrEnum = AUTO_RANGE,
             null_function_enabled = None,
-            null_value : Union[float, str] = None,
+            null_value : float | str | None = None,
             nplc : Range = None,
             bandwidth : Range = None,
             autozero : bool = None,
@@ -727,7 +403,7 @@ class SDM30x5(SCPIDriver):
             impedance : Impedance = None,
             threshold : float = None,
             volume : Volume = None):
-            
+
         """
         Set measurement function of the instrument
 
@@ -775,7 +451,7 @@ class SDM30x5(SCPIDriver):
         if null_value is not None:
             if isinstance(null_value, str) and null_value.upper == 'auto':
                 self._prot.write(f'{function.value}:NULL:VALUE:AUTO ON')
-            else:    
+            else:
                 self._prot.write(f'{function.value}:NULL:VALUE {null_value}')
         # NPLC
         if nplc is not None:
@@ -838,7 +514,7 @@ class SDM30x5(SCPIDriver):
     #     return [float(x) for x in values_raw.split(',') if x]
     # TODO : Check if DATA:REM? / R? / READ? don't do all the same, if it is the case, this function can be removed
 
-    
+
 
     # TODO : Implement measure subsystem
 
@@ -879,7 +555,7 @@ class SDM30x5(SCPIDriver):
         output = float(self._prot.query('MEAS:CURR:DC?'))
         return output
 
-    def measure_diode(self) -> Union[float, None]:
+    def measure_diode(self) -> float | None:
         """
         Make a diode measurement (voltage). The range is fixed at 2VDC, if the measured
         value is higher, None is returned. Otherwise, the diode voltage is returned
@@ -1068,7 +744,7 @@ class SDM30x5(SCPIDriver):
         address : int
         """
         return int(self._prot.query('SYST:COMM:GPIB:ADDR?'))
-    
+
     def set_gpib_address(self, address : int):
         """
         Set GPIB address
@@ -1078,7 +754,7 @@ class SDM30x5(SCPIDriver):
         address : int
         """
         self._prot.write(f'SYST:COMM:GPIB:ADDR {address}')
-    
+
     def get_gateway(self):
         """
         Return gateway ip address
@@ -1109,7 +785,7 @@ class SDM30x5(SCPIDriver):
         N : int
         """
         self._prot.write(f'TRIG:COUN {N}')
-    
+
     def set_trigger_delay(self, delay : float):
         """
         Set the delay between the trigger signal and the first measurement to 
@@ -1140,7 +816,7 @@ class SDM30x5(SCPIDriver):
             argument = 'NEG'
         else:
             raise ValueError("Invalid slope value")
-        
+
         self._prot.write(f'TRIG:SLOP {argument}')
 
     def set_trigger_source(self, source : str):
@@ -1168,238 +844,8 @@ class SDM30x5(SCPIDriver):
         }
         if source.lower() not in values:
             raise ValueError("Invalid source")
-        
+
         self._prot.write(f'TRIG:SOUR {values[source.lower()]}')
 
     def scanner_card(self) -> ScannerCard:
-        return ScannerCard(self._prot)    
-
-class SDM3045X(SDM30x5):
-    class VoltageRange(Range):
-        _600mV = '600mV'
-        _6V = '6V'
-        _60V = '60V'
-        _600V = '600V'
-        _1000V = '1e3V'
-        AUTO = SDM30x5.AUTO_RANGE
-    
-    class VoltageRangeAC(Range):
-        _600mV = '600mV'
-        _6V = '6V'
-        _60V = '60V'
-        _600V = '600V'
-        _750V = '750V'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class CurrentRange(Range):
-        _600uA = '600uA'
-        _6mA = '6mA'
-        _60mA = '60mA'
-        _600mA = '600mA'
-        _6A = '6A'
-        _10A = '10A'
-        AUTO = SDM30x5.AUTO_RANGE
-    
-    class CurrentRangeAC(Range):
-        _60mA = '60mA'
-        _600mA = '600mA'
-        _6A = '6A'
-        _10A = '10A'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class ResistanceRange(Range):
-        _600 = '600'
-        _6k = '6k'
-        _60k = '60k'
-        _600k = '600k'
-        _6M = '6M'
-        _60M = '60M'
-        _100M = '100M'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class CapacitanceRange(Range):
-        _2nF = '2nF'
-        _20nF = '20nF'
-        _200nF = '200nF'
-        _2uF = '2uF'
-        _20uF = '20uF'
-        _200uF = '200uF'
-        _10mF = '10000uF'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class NPLC(Range):
-        FAST = '0.3'
-        MIDDLE = '1'
-        SLOW = '10'
-
-
-    def __init__(self, adapter: Adapter) -> None:
-        super().__init__(adapter)
-        self._model = 'SDM3045X'
-        self._ranges = {
-            self.Function.VOLTAGE : self.VoltageRange,
-            self.Function.VOLTAGE_AC : self.VoltageRangeAC,
-            self.Function.CURRENT : self.CurrentRange,
-            self.Function.CURRENT_AC : self.CurrentRangeAC,
-            self.Function.RESISTANCE : self.ResistanceRange,
-            self.Function.RESISTANCE4 : self.ResistanceRange,
-            self.Function.CAPACITANCE : self.CapacitanceRange,
-            self.Function.TEMPERATURE : self.TemperatureTransducer
-        }
-        self._nplc = self.NPLC
-
-class SDM3055(SDM30x5):
-    class VoltageRange(Range):
-        _200mV = '200mV'
-        _2V = '2V'
-        _20V = '20V'
-        _200V = '200V'
-        _1000V = '1000V'
-        AUTO = SDM30x5.AUTO_RANGE
-    
-    class VoltageRangeAC(Range):
-        _200mV = '200mV'
-        _2V = '2V'
-        _20V = '20V'
-        _200V = '200V'
-        _750V = '750V'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class CurrentRange(Range):
-        _200uA = '200uA'
-        _2mA = '2mA'
-        _20mA = '20mA'
-        _200mA = '200mA'
-        _2A = '2A'
-        _10A = '10A'
-        AUTO = SDM30x5.AUTO_RANGE
-    
-    class CurrentRangeAC(Range):
-        _20mA = '20mA'
-        _200mA = '200mA'
-        _2A = '2A'
-        _10A = '10A'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class ResistanceRange(Range):
-        _200 = '200'
-        _2k = '2k'
-        _20k = '20k'
-        _200k = '200k'
-        _2M = '2M'
-        _10M = '10M'
-        _100M = '100M'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class CapacitanceRange(Range):
-        _2nF = '2nF'
-        _20nF = '20nF'
-        _200nF = '200nF'
-        _2uF = '2uF'
-        _20uF = '20uF'
-        _200uF = '200uF'
-        _10mF = '10000uF'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class NPLC(Range):
-        FAST = '0.3'
-        MIDDLE = '1'
-        SLOW = '10'
-
-    def __init__(self, adapter: Adapter) -> None:
-        super().__init__(adapter)
-        self._model = 'SDM3055'
-        self._ranges = {
-            self.Function.VOLTAGE : self.VoltageRange,
-            self.Function.VOLTAGE_AC : self.VoltageRangeAC,
-            self.Function.CURRENT : self.CurrentRange,
-            self.Function.CURRENT_AC : self.CurrentRangeAC,
-            self.Function.RESISTANCE : self.ResistanceRange,
-            self.Function.RESISTANCE4 : self.ResistanceRange,
-            self.Function.CAPACITANCE : self.CapacitanceRange
-        }
-        self._nplc = self.NPLC
-
-class SDM3065X(SDM30x5):
-    class VoltageRange(Range):
-        _200mV = '200mV'
-        _2V = '2V'
-        _20V = '20V'
-        _200V = '200V'
-        _1000V = '1000V'
-        AUTO = SDM30x5.AUTO_RANGE
-    
-    class VoltageRangeAC(Range):
-        _200mV = '200mV'
-        _2V = '2V'
-        _20V = '20V'
-        _200V = '200V'
-        _750V = '750V'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class CurrentRange(Range):
-        _200uA = '200uA'
-        _2mA = '2mA'
-        _20mA = '20mA'
-        _200mA = '200mA'
-        _2A = '2A'
-        _10A = '10A'
-        AUTO = SDM30x5.AUTO_RANGE
-    
-    class CurrentRangeAC(Range):
-        _200uA = '200uA'
-        _2mA = '2mA'
-        _20mA = '20mA'
-        _200mA = '200mA'
-        _2A = '2A'
-        _10A = '10A'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class ResistanceRange(Range):
-        _200 = '200'
-        _2k = '2k'
-        _20k = '20k'
-        _200k = '200k'
-        _1M = '1M'
-        _10M = '10M'
-        _100M = '100M'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class CapacitanceRange(Range):
-        _2nF = '2nF'
-        _20nF = '20nF'
-        _200nF = '200nF'
-        _2uF = '2uF'
-        _20uF = '20uF'
-        _200uF = '200uF'
-        _2mF = '2mF'
-        _20mF = '20mF'
-        _100mF = '100mF'
-        AUTO = SDM30x5.AUTO_RANGE
-
-    class NPLC(Range):
-        _0005 = '0.005'
-        _005 = '0.05'
-        _05 = '0.5'
-        _1 = '1'
-        _10 = '10'
-        _100 = '100'
-
-    class Bandwidth(Range):
-        _3Hz = '3Hz'
-        _20Hz = '20Hz'
-        _200Hz = '200Hz'
-
-    def __init__(self, adapter: Adapter) -> None:
-        super().__init__(adapter)
-        self._model = 'SDM3065X'
-        self._ranges = {
-            self.Function.VOLTAGE : self.VoltageRange,
-            self.Function.VOLTAGE_AC : self.VoltageRangeAC,
-            self.Function.CURRENT : self.CurrentRange,
-            self.Function.CURRENT_AC : self.CurrentRangeAC,
-            self.Function.RESISTANCE : self.ResistanceRange,
-            self.Function.RESISTANCE4 : self.ResistanceRange,
-            self.Function.CAPACITANCE : self.CapacitanceRange
-        }
-        self._nplc = self.NPLC
+        return ScannerCard(self._prot)

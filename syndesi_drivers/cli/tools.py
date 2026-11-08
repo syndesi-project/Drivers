@@ -1,14 +1,15 @@
+import importlib
 import inspect
 import pkgutil
-import importlib
-import syndesi_drivers
-from ..driver import Driver
 from pathlib import Path
-#from os.path import relpath
-from pathlib import Path
-from rich.tree import Tree
+
+from syndesi import Driver
+
 from rich.console import Console
 from rich.theme import Theme
+from rich.tree import Tree
+
+import syndesi_drivers
 
 FOLDER_STYLE = "green"
 DRIVER_STYLE = "bold cyan"
@@ -47,7 +48,7 @@ def list_drivers():
                     continue
                 relative_path = Path(module.__file__).relative_to(module_path)
                 location = relative_path.parts[:-1]
-                
+
 
                 dl = drivers
                 for l in location:
@@ -55,7 +56,7 @@ def list_drivers():
                         dl[l] = {}
                     dl = dl[l]
 
-                
+
                 dl[name] = None
 
     return drivers
@@ -64,7 +65,7 @@ def print_drivers():
     drivers = list_drivers()
     tree = Tree("[folder]syndesi_drivers[/folder]")
 
-    
+
 
     def add_drivers(tree : Tree, d : dict):
         for name, contents in d.items():
@@ -78,7 +79,7 @@ def print_drivers():
                 add_drivers(sub_tree, contents)
             else:
                 raise ValueError(f'Cannot parse {contents}')
-    
+
 
     add_drivers(tree, drivers)
     console.print(tree)
@@ -87,7 +88,7 @@ def print_drivers():
 
     # for location, lst in drivers.items():
     #     if location not in sub_trees:
-            
+
     #         sub_trees[location] = sub_tree.add
     #     # TODO : Group the items by location
     #     sub_tree = tree
@@ -97,7 +98,7 @@ def print_drivers():
     #     else:
     #         for l in location:
     #             sub_tree
-                
+
 
     #     for i, name in enumerate(lst):
     #         # if len(location) == 0:
